@@ -9,29 +9,43 @@ public class Boids : MonoBehaviour
     [SerializeField] float speed;
     [SerializeField] float distance;
 
-    [SerializeField] int bounds;
-    [SerializeField] GameObject centerObject;
-    List<Boid> boids = new List<Boid>();
+    [SerializeField] float bounds;
+    [SerializeField] Transform centerObject;
+    [SerializeField] Transform boundsWall;
+    [SerializeField] Transform centerPos;
 
-    void Start()
+    [SerializeField] Transform up, down, left, right, front, back;
+
+    List<Boid> boids = new List<Boid>();
+    private Vector3
+        upNormal = new Vector3(0.0f, -1.0f, 0.0f),
+        downNormal = new Vector3(0.0f, 1.0f, 0.0f),
+        leftNormal = new Vector3(1.0f, 0.0f, 0.0f),
+        rightNormal = new Vector3(-1.0f, 0.0f, 0.0f),
+        frontNormal = new Vector3(0.0f, 0.0f, 1.0f),
+        backNormal = new Vector3(0.0f, 0.0f, -1.0f);
+    void Awake()
     {
         for (var i = 0; i < count; i++)
         {
             var t = Instantiate(prefab).transform;
             t.parent = transform;
-            t.localPosition = RandV(bounds);
+            t.localPosition = Vector3.zero;
             var b = new Boid();
             b.transform = t;
             boids.Add(b);
         }
+        boundsWall.localScale = Vector3.one * bounds;
     }
     void Update()
     {
         var center = ComputeCenter();
-        centerObject.transform.position = center;
+        centerObject.position = center;
         ComputeCenterDirection(center);
         CertainRange();
         ComputeAverageVector();
+        Bound();
+
         for (var i = 0; i < boids.Count; i++)
         {
             var b = boids[i];
@@ -89,6 +103,53 @@ public class Boids : MonoBehaviour
             boids[i].dir += dir;
             boids[i].dir += RandV(10.0f).normalized;
         }
+    }
+    void Bound()
+    {
+        for (var i = 0; i < boids.Count; i++)
+        {
+            var b = boids[i];
+            var dir = Vector3.zero;
+            var hit = false;
+            if (b.transform.position.x > right.position.x)
+            {
+                dir += ComputeRefrectVector(b);
+                hit = true;
+            }
+            if (b.transform.position.x < left.position.x)
+            {
+                dir += ComputeRefrectVector(b);
+                hit = true;
+            }
+            if (b.transform.position.y > up.position.y)
+            {
+                dir += ComputeRefrectVector(b);
+                hit = true;
+            }
+            if (b.transform.position.y < down.position.y)
+            {
+                dir += ComputeRefrectVector(b);
+                hit = true;
+            }
+            if (b.transform.position.z > back.position.z)
+            {
+                dir += ComputeRefrectVector(b);
+                hit = true;
+            }
+            if (b.transform.position.z < front.position.z)
+            {
+                dir += ComputeRefrectVector(b);
+                hit = true;
+            }
+            if (hit == true)
+            {
+                b.dir = dir.normalized;
+            }
+        }
+    }
+    Vector3 ComputeRefrectVector(Boid b)
+    {
+        return (centerPos.position - b.transform.position).normalized;
     }
     Vector3 RandV(float seed = 1.0f)
     {
