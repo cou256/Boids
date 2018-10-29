@@ -5,12 +5,18 @@ using UnityEngine;
 public class Boids : MonoBehaviour
 {
     [SerializeField] GameObject prefab;
+    [SerializeField] bool noise;
     [SerializeField] int count;
+    [SerializeField] float minSpeed;
     [SerializeField] float maxSpeed;
+    [SerializeField] float fieldOfVision;
+    [SerializeField] float cohesion;
+    [SerializeField] float separate;
+    [SerializeField] float align;
+
     [SerializeField] float distance;
 
     [SerializeField] float bounds;
-    [SerializeField] Transform centerObject;
     [SerializeField] Transform boundsWall;
 
     [SerializeField] Transform up, down, left, right, front, back;
@@ -24,49 +30,48 @@ public class Boids : MonoBehaviour
             var t = Instantiate(prefab).transform;
             t.parent = transform;
             t.localPosition = Vector3.zero;
-            var b = new Boid(t, maxSpeed);
+            var b = new Boid(t, minSpeed, maxSpeed);
             boids.Add(b);
         }
         boundsWall.localScale = Vector3.one * bounds;
     }
     void Update()
     {
-        var center = ComputeCenter();
-        centerObject.position = center;
-
-        ComputeCenterDirection(center);
-        CertainRange();
-        ComputeAverageVector();
+        if (noise) Noise();
+        Cohesion();
+        Separate();
+        Align();
         CheckBound();
-
         for (var i = 0; i < boids.Count; i++)
         {
             boids[i].Update();
         }
     }
-    Vector3 ComputeCenter()
+    float dt;
+    void Noise()
+    {
+        cohesion = Mathf.PerlinNoise(10 + dt, 100 + dt);
+        separate = Mathf.PerlinNoise(1000 + dt, 10000 + dt);
+        align = Mathf.PerlinNoise(10000 + dt, 100000 + dt);
+        dt += Time.deltaTime;
+    }
+    void Cohesion()
     {
         var center = Vector3.zero;
         for (var i = 0; i < boids.Count; i++)
         {
-            if (boids[i].Boss) continue;
             center += boids[i].Transform.position;
         }
         center /= boids.Count - 1;
         center += boids[0].Transform.position;
         center *= 0.5f;
-        return center;
-    }
-    void ComputeCenterDirection(Vector3 center)
-    {
         for (var i = 0; i < boids.Count; i++)
         {
-            if (boids[i].Boss) continue;
             var dir = (center - boids[i].Transform.position);
-            boids[i].ApplyForce(dir);
+            boids[i].ApplyForce(dir.normalized * cohesion);
         }
     }
-    void CertainRange()
+    void Separate()
     {
         for (var i = 0; i < boids.Count; i++)
         {
@@ -79,12 +84,12 @@ public class Boids : MonoBehaviour
                 var dis = Random.Range(0, distance);
                 if (diff.magnitude < dis)
                 {
-                    boids[i].ApplyForce(diff);
+                    boids[i].ApplyForce(diff.normalized * separate);
                 }
             }
         }
     }
-    void ComputeAverageVector()
+    void Align()
     {
         var average = Vector3.zero;
         for (var i = 0; i < boids.Count; i++)
@@ -94,8 +99,7 @@ public class Boids : MonoBehaviour
         var dir = (average / boids.Count);
         for (var i = 0; i < boids.Count; i++)
         {
-            if (boids[i].Boss) continue;
-            boids[i].ApplyForce(dir);
+            boids[i].ApplyForce(dir.normalized * align);
         }
     }
     void CheckBound()
@@ -146,33 +150,33 @@ public class Boids : MonoBehaviour
     {
         public Transform Transform { get; }
         public Vector3 Velocity { get { return velocity; } }
-        public bool Boss;
         public float X { get { return Transform.position.x; } set { SetPos(0, value); } }
         public float Y { get { return Transform.position.y; } set { SetPos(1, value); } }
         public float Z { get { return Transform.position.z; } set { SetPos(2, value); } }
 
+        float minSpeed;
         float maxSpeed;
         Vector3 acceleration;
         Vector3 velocity;
-        public Boid(Transform transform, float maxSpeed)
+        public Boid(Transform transform, float minSpeed, float maxSpeed)
         {
             Transform = transform;
-            this.maxSpeed = Random.Range(0.3f, maxSpeed);
+            this.maxSpeed = Random.Range(minSpeed, maxSpeed);
             ApplyForce(Random.rotation * transform.forward);
         }
         public void Update()
         {
-            velocity += acceleration.normalized * Time.deltaTime;
+            velocity += acceleration * Time.deltaTime;
+            Transform.LookAt(Transform.position + velocity.normalized);
             velocity.x = Mathf.Clamp(velocity.x, -maxSpeed, maxSpeed);
             velocity.y = Mathf.Clamp(velocity.y, -maxSpeed, maxSpeed);
             velocity.z = Mathf.Clamp(velocity.z, -maxSpeed, maxSpeed);
-            Transform.LookAt(Transform.position + velocity);
             Transform.position += velocity;
             acceleration = Vector3.zero;
         }
         public void ApplyForce(Vector3 force)
         {
-            acceleration += force;
+            acceleration += force.normalized;
         }
         public void Reflection(int index)
         {
