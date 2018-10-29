@@ -6,33 +6,25 @@ public class Boids : MonoBehaviour
 {
     [SerializeField] GameObject prefab;
     [SerializeField] int count;
-    [SerializeField] float speed;
+    [SerializeField] float maxSpeed;
     [SerializeField] float distance;
 
     [SerializeField] float bounds;
     [SerializeField] Transform centerObject;
     [SerializeField] Transform boundsWall;
-    [SerializeField] Transform centerPos;
 
     [SerializeField] Transform up, down, left, right, front, back;
 
     List<Boid> boids = new List<Boid>();
-    private Vector3
-        upNormal = new Vector3(0.0f, -1.0f, 0.0f),
-        downNormal = new Vector3(0.0f, 1.0f, 0.0f),
-        leftNormal = new Vector3(1.0f, 0.0f, 0.0f),
-        rightNormal = new Vector3(-1.0f, 0.0f, 0.0f),
-        frontNormal = new Vector3(0.0f, 0.0f, 1.0f),
-        backNormal = new Vector3(0.0f, 0.0f, -1.0f);
-    void Awake()
+
+    void Start()
     {
         for (var i = 0; i < count; i++)
         {
             var t = Instantiate(prefab).transform;
             t.parent = transform;
             t.localPosition = Vector3.zero;
-            var b = new Boid();
-            b.transform = t;
+            var b = new Boid(t, maxSpeed);
             boids.Add(b);
         }
         boundsWall.localScale = Vector3.one * bounds;
@@ -41,16 +33,15 @@ public class Boids : MonoBehaviour
     {
         var center = ComputeCenter();
         centerObject.position = center;
+
         ComputeCenterDirection(center);
         CertainRange();
         ComputeAverageVector();
-        Bound();
+        CheckBound();
 
         for (var i = 0; i < boids.Count; i++)
         {
-            var b = boids[i];
-            b.transform.position += b.dir.normalized * speed;
-            b.transform.LookAt(b.dir);
+            boids[i].Update();
         }
     }
     Vector3 ComputeCenter()
@@ -58,18 +49,21 @@ public class Boids : MonoBehaviour
         var center = Vector3.zero;
         for (var i = 0; i < boids.Count; i++)
         {
-            center += boids[i].transform.position;
+            if (boids[i].Boss) continue;
+            center += boids[i].Transform.position;
         }
-        center /= boids.Count;
+        center /= boids.Count - 1;
+        center += boids[0].Transform.position;
+        center *= 0.5f;
         return center;
     }
     void ComputeCenterDirection(Vector3 center)
     {
         for (var i = 0; i < boids.Count; i++)
         {
-            var b = boids[i];
-            var dir = (center - b.transform.position).normalized;
-            boids[i].dir += dir;
+            if (boids[i].Boss) continue;
+            var dir = (center - boids[i].Transform.position);
+            boids[i].ApplyForce(dir);
         }
     }
     void CertainRange()
@@ -81,11 +75,11 @@ public class Boids : MonoBehaviour
                 var a = boids[i];
                 var b = boids[j];
                 if (a == b) continue;
-                var diff = a.transform.position - b.transform.position;
+                var diff = a.Transform.position - b.Transform.position;
                 var dis = Random.Range(0, distance);
                 if (diff.magnitude < dis)
                 {
-                    boids[i].dir += diff.normalized;
+                    boids[i].ApplyForce(diff);
                 }
             }
         }
@@ -95,61 +89,51 @@ public class Boids : MonoBehaviour
         var average = Vector3.zero;
         for (var i = 0; i < boids.Count; i++)
         {
-            average += boids[i].dir;
+            average += boids[i].Velocity;
         }
-        var dir = (average / boids.Count).normalized;
+        var dir = (average / boids.Count);
         for (var i = 0; i < boids.Count; i++)
         {
-            boids[i].dir += dir;
-            boids[i].dir += RandV(10.0f).normalized;
+            if (boids[i].Boss) continue;
+            boids[i].ApplyForce(dir);
         }
     }
-    void Bound()
+    void CheckBound()
     {
         for (var i = 0; i < boids.Count; i++)
         {
             var b = boids[i];
-            var dir = Vector3.zero;
-            var hit = false;
-            if (b.transform.position.x > right.position.x)
+            if (b.X > right.position.x)
             {
-                dir += ComputeRefrectVector(b);
-                hit = true;
+                b.X = right.position.x;
+                b.Reflection(0);
             }
-            if (b.transform.position.x < left.position.x)
+            if (b.X < left.position.x)
             {
-                dir += ComputeRefrectVector(b);
-                hit = true;
+                b.X = left.position.x;
+                b.Reflection(0);
             }
-            if (b.transform.position.y > up.position.y)
+            if (b.Y > up.position.y)
             {
-                dir += ComputeRefrectVector(b);
-                hit = true;
+                b.Y = up.position.y;
+                b.Reflection(1);
             }
-            if (b.transform.position.y < down.position.y)
+            if (b.Y < down.position.y)
             {
-                dir += ComputeRefrectVector(b);
-                hit = true;
+                b.Y = down.position.y;
+                b.Reflection(1);
             }
-            if (b.transform.position.z > back.position.z)
+            if (b.Z > back.position.z)
             {
-                dir += ComputeRefrectVector(b);
-                hit = true;
+                b.Z = back.position.z;
+                b.Reflection(2);
             }
-            if (b.transform.position.z < front.position.z)
+            if (b.Z < front.position.z)
             {
-                dir += ComputeRefrectVector(b);
-                hit = true;
-            }
-            if (hit == true)
-            {
-                b.dir = dir.normalized;
+                b.Z = front.position.z;
+                b.Reflection(2);
             }
         }
-    }
-    Vector3 ComputeRefrectVector(Boid b)
-    {
-        return (centerPos.position - b.transform.position).normalized;
     }
     Vector3 RandV(float seed = 1.0f)
     {
@@ -160,7 +144,45 @@ public class Boids : MonoBehaviour
     }
     class Boid
     {
-        public Transform transform;
-        public Vector3 dir;
+        public Transform Transform { get; }
+        public Vector3 Velocity { get { return velocity; } }
+        public bool Boss;
+        public float X { get { return Transform.position.x; } set { SetPos(0, value); } }
+        public float Y { get { return Transform.position.y; } set { SetPos(1, value); } }
+        public float Z { get { return Transform.position.z; } set { SetPos(2, value); } }
+
+        float maxSpeed;
+        Vector3 acceleration;
+        Vector3 velocity;
+        public Boid(Transform transform, float maxSpeed)
+        {
+            Transform = transform;
+            this.maxSpeed = Random.Range(0.3f, maxSpeed);
+            ApplyForce(Random.rotation * transform.forward);
+        }
+        public void Update()
+        {
+            velocity += acceleration.normalized * Time.deltaTime;
+            velocity.x = Mathf.Clamp(velocity.x, -maxSpeed, maxSpeed);
+            velocity.y = Mathf.Clamp(velocity.y, -maxSpeed, maxSpeed);
+            velocity.z = Mathf.Clamp(velocity.z, -maxSpeed, maxSpeed);
+            Transform.LookAt(Transform.position + velocity);
+            Transform.position += velocity;
+            acceleration = Vector3.zero;
+        }
+        public void ApplyForce(Vector3 force)
+        {
+            acceleration += force;
+        }
+        public void Reflection(int index)
+        {
+            velocity[index] *= -1.0f;
+        }
+        void SetPos(int index, float val)
+        {
+            var p = Transform.position;
+            p[index] = val;
+            Transform.position = p;
+        }
     }
 }
