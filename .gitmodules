@@ -1,0 +1,3 @@
+[submodule "Assets/GPU/Cginc"]
+	path = Assets/GPU/Cginc
+	url = https://github.com/cou256/CommonCginc.git
