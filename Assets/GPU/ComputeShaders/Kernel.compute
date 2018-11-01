@@ -1,0 +1,81 @@
+﻿#pragma kernel Compute
+#include "UnityCG.cginc"
+#include "../Cginc/Transform.cginc"
+
+struct TransformStruct{
+	float3 translate;
+	float3 rotation;
+	float3 scale;
+	float3 acceleration;
+	float3 velocity;
+	bool init;
+};
+
+RWStructuredBuffer<TransformStruct> _TransformBuff;
+float3 _Bounds;
+float _Acceleration;
+
+/*
+ Reference
+ https://stackoverflow.com/questions/12964279/whats-the-origin-of-this-glsl-rand-one-liner
+*/
+float rand(uint3 id : SV_DispatchThreadID, float salt) {
+	return frac(sin(dot(id.xy, float2(12.9898, 78.233))) * 43758.5453 * salt);
+}
+void initialize(uint3 id : SV_DispatchThreadID){
+	float d1 = unity_DeltaTime.x;
+	float d2 = d1 * d1;
+	float d3 = d1 * d2;
+	_TransformBuff[id.x].acceleration = normalize((float3(rand(id, 2 * d1), rand(id, 3 * d2), rand(id, 4 * d3)) - 0.5)) * rand(id, 5 * d1);
+	_TransformBuff[id.x].scale = 0.1;
+	_TransformBuff[id.x].rotation = rand(id, 23 * d1) * 360;
+	_TransformBuff[id.x].init = true;
+}
+void motion(uint3 id : SV_DispatchThreadID){
+	_TransformBuff[id.x].velocity += _TransformBuff[id.x].acceleration * unity_DeltaTime.x;
+	_TransformBuff[id.x].translate += _TransformBuff[id.x].velocity * unity_DeltaTime.x * _Acceleration;
+	_TransformBuff[id.x].acceleration = float3(0.0,0.0,0.0);
+}
+void rotate(uint3 id : SV_DispatchThreadID){
+	_TransformBuff[id.x].rotation += length(_TransformBuff[id.x].velocity * unity_DeltaTime.x) * _Acceleration;
+}
+void boundary(uint3 id : SV_DispatchThreadID){
+	float3 t = _TransformBuff[id.x].translate;
+	float3 v = _TransformBuff[id.x].velocity;
+	float3 b = _Bounds * 0.5;
+	float3 desired = float3(0.0,0.0,0.0);
+	if(t.x < -b.x){
+		desired = float3( 1.0, v.y, v.z);
+	}
+	if(t.x >  b.x){
+		desired = float3(-1.0, v.y, v.z);
+	}
+	if(t.y < -b.y){
+		desired = float3( v.x, 1.0, v.z);
+	}
+	if(t.y >  b.y){
+		desired = float3( v.x,-1.0, v.z);
+	}
+	if(t.z < -b.z){
+		desired = float3( v.x, v.y, 1.0);
+	}
+	if(t.z >  b.z){
+		desired = float3( v.x, v.y,-1.0);
+	}
+	if(desired.x != 0.0 | desired.y != 0.0 | desired.z != 0.0) {
+		_TransformBuff[id.x].acceleration += (normalize(desired) - _TransformBuff[id.x].velocity);
+	}
+}
+void update(uint3 id : SV_DispatchThreadID) {
+	motion(id);
+	rotate(id);
+	boundary(id);
+}
+[numthreads(512, 1, 1)]
+void Compute(uint3 id : SV_DispatchThreadID) {
+	if(_TransformBuff[id.x].init == false){
+		initialize(id);
+	}else{
+		update(id);
+	}
+}
