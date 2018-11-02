@@ -15,6 +15,25 @@ namespace GPU
         ComputeBuffer transformBuff;
         ComputeBuffer argsBuff;
 
+        const string INIT = "Initialize";
+        const string CENTER = "CenterCompute";
+        const string BOIDS = "BoidsCompute";
+        const string BUFF = "_TransformBuff";
+
+        void Awake()
+        {
+            transformBuff = CreateComputeBuffer(new TransformStruct[numberOfDraw]);
+
+            var args = new uint[5] { 0, 0, 0, 0, 0 };
+            args[0] = mesh.GetIndexCount(0);
+            args[1] = (uint)numberOfDraw;
+            argsBuff = new ComputeBuffer(1, args.Length * sizeof(uint), ComputeBufferType.IndirectArguments);
+            argsBuff.SetData(args);
+
+            SetBuffer(INIT, BUFF, transformBuff);
+            SetBuffer(CENTER, BUFF, transformBuff);
+            SetBuffer(BOIDS, BUFF, transformBuff);
+        }
         void OnDisable()
         {
             transformBuff.Release();
@@ -24,16 +43,7 @@ namespace GPU
         }
         void Start()
         {
-            transformBuff = CreateComputeBuffer(new TransformStruct[numberOfDraw]);
-
-            var args = new uint[5] { 0, 0, 0, 0, 0 };
-            args[0] = mesh.GetIndexCount(0);
-            args[1] = (uint)numberOfDraw;
-            argsBuff = new ComputeBuffer(1, args.Length * sizeof(uint), ComputeBufferType.IndirectArguments);
-            argsBuff.SetData(args);
-            kernel.SetBuffer(kernel.FindKernel("Compute"), "_TransformBuff", transformBuff);
-
-            mat.SetBuffer("_TransformBuff", transformBuff);
+            kernel.Dispatch(kernel.FindKernel(INIT), numberOfDraw / 512 + 1, 1, 1);
         }
         void Update()
         {
@@ -43,7 +53,7 @@ namespace GPU
         {
             kernel.SetVector("_Bounds", bounds);
             kernel.SetFloat("_Acceleration", acceleration);
-            kernel.Dispatch(kernel.FindKernel("Compute"), numberOfDraw / 512 + 1, 1, 1);
+            kernel.Dispatch(kernel.FindKernel(BOIDS), numberOfDraw / 512 + 1, 1, 1);
             Graphics.DrawMeshInstancedIndirect(mesh, 0, mat, new Bounds(Vector3.zero, bounds), argsBuff);
         }
         struct TransformStruct
@@ -53,13 +63,17 @@ namespace GPU
             public Vector3 scale;
             public Vector3 acceleration;
             public Vector3 velocity;
-            public int init;
         }
         ComputeBuffer CreateComputeBuffer<T>(T[] data, ComputeBufferType type = ComputeBufferType.Default)
         {
             var computeBuffer = new ComputeBuffer(data.Length, Marshal.SizeOf(typeof(T)), type);
             computeBuffer.SetData(data);
             return computeBuffer;
+        }
+        void SetBuffer(string kernelName, string buffName, ComputeBuffer buff)
+        {
+            kernel.SetBuffer(kernel.FindKernel(kernelName), buffName, buff);
+            mat.SetBuffer(buffName, buff);
         }
     }
 }

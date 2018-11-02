@@ -24,7 +24,6 @@ Shader "Instanced/DrawMeshInstanced" {
 			float3 scale;
 			float3 acceleration;
 			float3 velocity;
-			bool init;
 		};
 		#ifdef UNITY_PROCEDURAL_INSTANCING_ENABLED
 		StructuredBuffer<TransformStruct> _TransformBuff;

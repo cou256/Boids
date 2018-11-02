@@ -1,4 +1,6 @@
-﻿#pragma kernel Compute
+﻿#pragma kernel Initialize
+#pragma kernel CenterCompute
+#pragma kernel BoidsCompute
 #include "UnityCG.cginc"
 #include "../Cginc/Transform.cginc"
 
@@ -8,7 +10,6 @@ struct TransformStruct{
 	float3 scale;
 	float3 acceleration;
 	float3 velocity;
-	bool init;
 };
 
 RWStructuredBuffer<TransformStruct> _TransformBuff;
@@ -22,15 +23,6 @@ float _Acceleration;
 float rand(uint3 id : SV_DispatchThreadID, float salt) {
 	return frac(sin(dot(id.xy, float2(12.9898, 78.233))) * 43758.5453 * salt);
 }
-void initialize(uint3 id : SV_DispatchThreadID){
-	float d1 = unity_DeltaTime.x;
-	float d2 = d1 * d1;
-	float d3 = d1 * d2;
-	_TransformBuff[id.x].acceleration = normalize((float3(rand(id, 2 * d1), rand(id, 3 * d2), rand(id, 4 * d3)) - 0.5)) * rand(id, 5 * d1);
-	_TransformBuff[id.x].scale = 0.1;
-	_TransformBuff[id.x].rotation = rand(id, 23 * d1) * 360;
-	_TransformBuff[id.x].init = true;
-}
 void motion(uint3 id : SV_DispatchThreadID){
 	_TransformBuff[id.x].velocity += _TransformBuff[id.x].acceleration * unity_DeltaTime.x;
 	_TransformBuff[id.x].translate += _TransformBuff[id.x].velocity * unity_DeltaTime.x * _Acceleration;
@@ -39,7 +31,13 @@ void motion(uint3 id : SV_DispatchThreadID){
 void rotate(uint3 id : SV_DispatchThreadID){
 	_TransformBuff[id.x].rotation += length(_TransformBuff[id.x].velocity * unity_DeltaTime.x) * _Acceleration;
 }
-void boundary(uint3 id : SV_DispatchThreadID){
+float3 separate(uint3 id : SV_DispatchThreadID){
+	float3 sum = float3(0.0,0.0,0.0);
+	int count = 0;
+
+	return sum;
+}
+float3 boundary(uint3 id : SV_DispatchThreadID){
 	float3 t = _TransformBuff[id.x].translate;
 	float3 v = _TransformBuff[id.x].velocity;
 	float3 b = _Bounds * 0.5;
@@ -63,19 +61,29 @@ void boundary(uint3 id : SV_DispatchThreadID){
 		desired = float3( v.x, v.y,-1.0);
 	}
 	if(desired.x != 0.0 | desired.y != 0.0 | desired.z != 0.0) {
-		_TransformBuff[id.x].acceleration += (normalize(desired) - _TransformBuff[id.x].velocity);
+		return (normalize(desired) - _TransformBuff[id.x].velocity);
+	}else{
+		return float3(0.0,0.0,0.0);
 	}
-}
-void update(uint3 id : SV_DispatchThreadID) {
-	motion(id);
-	rotate(id);
-	boundary(id);
 }
 [numthreads(512, 1, 1)]
-void Compute(uint3 id : SV_DispatchThreadID) {
-	if(_TransformBuff[id.x].init == false){
-		initialize(id);
-	}else{
-		update(id);
-	}
+void Initialize(uint3 id : SV_DispatchThreadID) {
+	float d1 = unity_DeltaTime.x;
+	float d2 = d1 * d1;
+	float d3 = d1 * d2;
+	_TransformBuff[id.x].acceleration = normalize((float3(rand(id, 2 * d1), rand(id, 3 * d2), rand(id, 4 * d3)) - 0.5)) * rand(id, 5 * d1);
+	_TransformBuff[id.x].scale = 0.1;
+	_TransformBuff[id.x].rotation = rand(id, 23 * d1) * 360;
+}
+[numthreads(512, 1, 1)]
+void CenterCompute(uint3 id : SV_DispatchThreadID) {
+}
+[numthreads(512, 1, 1)]
+void BoidsCompute(uint3 id : SV_DispatchThreadID) {
+	motion(id);
+	rotate(id);
+	float3 sep = separate(id);	
+	float3 bou = boundary(id);
+	_TransformBuff[id.x].acceleration += sep;
+	_TransformBuff[id.x].acceleration += bou;
 }

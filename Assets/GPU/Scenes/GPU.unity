@@ -308,7 +308,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   numberOfDraw: 500000
-  acceleration: 50
+  acceleration: 30
   bounds: {x: 20, y: 20, z: 20}
   mesh: {fileID: 10202, guid: 0000000000000000e000000000000000, type: 0}
   mat: {fileID: 2100000, guid: 8879e116ba60cc8458e27e49422277c1, type: 2}
