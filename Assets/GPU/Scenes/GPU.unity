@@ -307,9 +307,11 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: f69431ec44890074787c30baf97bc40a, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  numberOfDraw: 500000
-  acceleration: 30
-  bounds: {x: 20, y: 20, z: 20}
+  numberOfDraw: 8000
+  acceleration: 10
+  neighborDistance: 1
+  fieldOfView: 5
+  bounds: {x: 40, y: 40, z: 40}
   mesh: {fileID: 10202, guid: 0000000000000000e000000000000000, type: 0}
   mat: {fileID: 2100000, guid: 8879e116ba60cc8458e27e49422277c1, type: 2}
   kernel: {fileID: 7200000, guid: 3c2f4863bcd17d74d87219865ee2b6b0, type: 3}
@@ -596,7 +598,7 @@ Transform:
   m_PrefabInternal: {fileID: 0}
   m_GameObject: {fileID: 977752216}
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0, y: 0, z: -15}
+  m_LocalPosition: {x: 0, y: 0, z: -60}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_Children:
   - {fileID: 240397137}

@@ -11,7 +11,7 @@ Shader "Instanced/DrawMeshInstanced" {
 		LOD 200
 		
 		CGPROGRAM
-		#pragma surface surf Standard fullforwardshadows vertex:vert
+		#pragma surface surf Standard fullforwardshadows
 		#pragma multi_compile_instancing
 		#pragma instancing_options procedural:setup
 		#pragma target 5.0
@@ -24,7 +24,14 @@ Shader "Instanced/DrawMeshInstanced" {
 			float3 scale;
 			float3 acceleration;
 			float3 velocity;
+			float3 center;
+			uint centerCount;
+			float3 separate;
+			uint separateCount;
+			float3 velocitySum;
+		    uint velocitySumCount;
 		};
+
 		#ifdef UNITY_PROCEDURAL_INSTANCING_ENABLED
 		StructuredBuffer<TransformStruct> _TransformBuff;
 		#endif
@@ -39,17 +46,12 @@ Shader "Instanced/DrawMeshInstanced" {
 		half _Metallic;
 		fixed4 _Color;
 
-		UNITY_INSTANCING_BUFFER_START(Props)
-		UNITY_INSTANCING_BUFFER_END(Props)
-
 		void setup()
 		{
 			#ifdef UNITY_PROCEDURAL_INSTANCING_ENABLED
 			TransformStruct t = _TransformBuff[unity_InstanceID];
 			unity_ObjectToWorld = mul(translate_m(t.translate), mul(rotate_m(t.rotation), scale_m(t.scale)));
 			#endif
-		}
-		void vert(inout appdata_full v) {
 		}
 		void surf (Input IN, inout SurfaceOutputStandard o) {
 			fixed4 c = tex2D (_MainTex, IN.uv_MainTex) * _Color;

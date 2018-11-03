@@ -1,5 +1,7 @@
 ﻿#pragma kernel Initialize
 #pragma kernel CenterCompute
+#pragma kernel SeparateCompute
+#pragma kernel VelocitySumCompute
 #pragma kernel BoidsCompute
 #include "UnityCG.cginc"
 #include "../Cginc/Transform.cginc"
@@ -10,11 +12,20 @@ struct TransformStruct{
 	float3 scale;
 	float3 acceleration;
 	float3 velocity;
+	float3 center;
+	uint centerCount;
+	float3 separate;
+    uint separateCount;
+	float3 velocitySum;
+    uint velocitySumCount;
 };
 
 RWStructuredBuffer<TransformStruct> _TransformBuff;
 float3 _Bounds;
+float3 _Scale;
 float _Acceleration;
+float _NeighborDistance;
+float _FieldOfView;
 
 /*
  Reference
@@ -30,12 +41,6 @@ void motion(uint3 id : SV_DispatchThreadID){
 }
 void rotate(uint3 id : SV_DispatchThreadID){
 	_TransformBuff[id.x].rotation += length(_TransformBuff[id.x].velocity * unity_DeltaTime.x) * _Acceleration;
-}
-float3 separate(uint3 id : SV_DispatchThreadID){
-	float3 sum = float3(0.0,0.0,0.0);
-	int count = 0;
-
-	return sum;
 }
 float3 boundary(uint3 id : SV_DispatchThreadID){
 	float3 t = _TransformBuff[id.x].translate;
@@ -66,24 +71,87 @@ float3 boundary(uint3 id : SV_DispatchThreadID){
 		return float3(0.0,0.0,0.0);
 	}
 }
-[numthreads(512, 1, 1)]
+float3 separate(uint3 id : SV_DispatchThreadID){
+	float3 ret = float3(0.0,0.0,0.0);
+	if(_TransformBuff[id.x].separateCount > 0)
+	{
+		ret = normalize(_TransformBuff[id.x].separate / _TransformBuff[id.x].separateCount);
+		_TransformBuff[id.x].separate = float3(0.0,0.0,0.0);
+		_TransformBuff[id.x].separateCount = 0.0;
+	}
+	return ret;
+}
+float3 cohesion(uint3 id : SV_DispatchThreadID) {
+	float3 ret = float3(0.0,0.0,0.0);
+	if(_TransformBuff[id.x].centerCount > 0)
+	{
+		float3 center = _TransformBuff[id.x].center / _TransformBuff[id.x].centerCount;
+		ret = normalize(center - _TransformBuff[id.x].translate);
+		_TransformBuff[id.x].center = float3(0.0,0.0,0.0);
+		_TransformBuff[id.x].centerCount = 0.0;
+	}
+	return ret;
+}
+float3 align(uint3 id : SV_DispatchThreadID) {
+	float3 ret = float3(0.0,0.0,0.0);
+	if(_TransformBuff[id.x].velocitySumCount > 0 && length(_TransformBuff[id.x].velocitySum) > 0)
+	{
+		ret = normalize(_TransformBuff[id.x].velocitySum / _TransformBuff[id.x].velocitySumCount);
+		_TransformBuff[id.x].velocitySum = float3(0.0,0.0,0.0);
+		_TransformBuff[id.x].velocitySumCount = 0.0;
+	}
+	return ret;
+}
+[numthreads(1024, 1, 1)]
 void Initialize(uint3 id : SV_DispatchThreadID) {
-	float d1 = unity_DeltaTime.x;
-	float d2 = d1 * d1;
-	float d3 = d1 * d2;
-	_TransformBuff[id.x].acceleration = normalize((float3(rand(id, 2 * d1), rand(id, 3 * d2), rand(id, 4 * d3)) - 0.5)) * rand(id, 5 * d1);
-	_TransformBuff[id.x].scale = 0.1;
-	_TransformBuff[id.x].rotation = rand(id, 23 * d1) * 360;
+	_TransformBuff[id.x].translate = float3(rand(id, rand(id, 2)), rand(id,rand(id, 3)), rand(id, rand(id, 4))) - 0.5;
+	_TransformBuff[id.x].scale = 0.3;
+	_TransformBuff[id.x].rotation = rand(id, unity_DeltaTime.x) * 360;
 }
-[numthreads(512, 1, 1)]
+[numthreads(32, 32, 1)]
+void SeparateCompute(uint3 id : SV_DispatchThreadID) {
+	float3 diff = _TransformBuff[id.x].translate - _TransformBuff[id.y].translate;
+	float dist = length(diff);
+	if (dist > 0.0 && dist < _NeighborDistance)
+	{
+		diff = normalize(diff);
+		diff /= dist;
+		_TransformBuff[id.x].separate += diff;
+		_TransformBuff[id.x].separateCount++;
+	}
+}
+[numthreads(32, 32, 1)]
 void CenterCompute(uint3 id : SV_DispatchThreadID) {
+	float dist = length(_TransformBuff[id.x].translate - _TransformBuff[id.y].translate);
+	if (dist > 0.0 && dist < _NeighborDistance)
+	{
+		_TransformBuff[id.x].center += _TransformBuff[id.y].translate;
+		_TransformBuff[id.x].centerCount++;
+	}
 }
-[numthreads(512, 1, 1)]
+[numthreads(32, 32, 1)]
+void VelocitySumCompute(uint3 id : SV_DispatchThreadID) {
+	float dist = length(_TransformBuff[id.x].translate - _TransformBuff[id.y].translate);
+	if (dist > 0.0 && dist < _NeighborDistance)
+	{
+		_TransformBuff[id.x].velocitySum += _TransformBuff[id.y].velocity;
+		_TransformBuff[id.x].velocitySumCount++;
+	}
+}
+[numthreads(1024, 1, 1)]
 void BoidsCompute(uint3 id : SV_DispatchThreadID) {
 	motion(id);
 	rotate(id);
-	float3 sep = separate(id);	
+	float3 sep = separate(id);
+	float3 coh = cohesion(id);
+	float3 ali = align(id);
 	float3 bou = boundary(id);
+	sep *= 1.1;
+	coh *= 1.0;
+	ali *= 1.0;
+	bou *= 1.0;
 	_TransformBuff[id.x].acceleration += sep;
+	_TransformBuff[id.x].acceleration += coh;
+	_TransformBuff[id.x].acceleration += ali;
 	_TransformBuff[id.x].acceleration += bou;
 }

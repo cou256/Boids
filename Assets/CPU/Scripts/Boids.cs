@@ -63,9 +63,7 @@ namespace CPU
             {
                 center += boids[i].Transform.position;
             }
-            center /= boids.Count - 1;
-            center += boids[0].Transform.position;
-            center *= 0.5f;
+            center /= boids.Count;
             for (var i = 0; i < boids.Count; i++)
             {
                 var dir = (center - boids[i].Transform.position);

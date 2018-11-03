@@ -916,10 +916,10 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   prefab: {fileID: 1472957729055450, guid: cbedfe16636536149a436195dc0834ad, type: 2}
-  noise: 0
+  noise: 1
   count: 300
-  minSpeed: 0.1
-  maxSpeed: 0.3
+  minSpeed: 0.3
+  maxSpeed: 0.5
   fieldOfVision: 1
   cohesion: 1
   separate: 1

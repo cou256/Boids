@@ -7,6 +7,8 @@ namespace GPU
     {
         [SerializeField] int numberOfDraw;
         [SerializeField] float acceleration;
+        [SerializeField] float neighborDistance;
+        [SerializeField] float fieldOfView;
         [SerializeField] Vector3 bounds;
         [SerializeField] Mesh mesh;
         [SerializeField] Material mat;
@@ -16,23 +18,23 @@ namespace GPU
         ComputeBuffer argsBuff;
 
         const string INIT = "Initialize";
+        const string SEPARATE = "SeparateCompute";
         const string CENTER = "CenterCompute";
+        const string VELOCITY_SUM = "VelocitySumCompute";
         const string BOIDS = "BoidsCompute";
         const string BUFF = "_TransformBuff";
+        int thread32, thread1024;
+
+        TransformStruct[] data;
 
         void Awake()
         {
             transformBuff = CreateComputeBuffer(new TransformStruct[numberOfDraw]);
-
-            var args = new uint[5] { 0, 0, 0, 0, 0 };
-            args[0] = mesh.GetIndexCount(0);
-            args[1] = (uint)numberOfDraw;
-            argsBuff = new ComputeBuffer(1, args.Length * sizeof(uint), ComputeBufferType.IndirectArguments);
-            argsBuff.SetData(args);
-
-            SetBuffer(INIT, BUFF, transformBuff);
-            SetBuffer(CENTER, BUFF, transformBuff);
-            SetBuffer(BOIDS, BUFF, transformBuff);
+            thread32 = numberOfDraw / 32 + 1;
+            thread1024 = numberOfDraw / 1024 + 1;
+            SetData();
+            SetBuffers();
+            data = new TransformStruct[numberOfDraw];
         }
         void OnDisable()
         {
@@ -43,26 +45,16 @@ namespace GPU
         }
         void Start()
         {
-            kernel.Dispatch(kernel.FindKernel(INIT), numberOfDraw / 512 + 1, 1, 1);
+            kernel.Dispatch(kernel.FindKernel(INIT), thread1024, 1, 1);
         }
         void Update()
         {
-            DrawMesh();
-        }
-        void DrawMesh()
-        {
-            kernel.SetVector("_Bounds", bounds);
-            kernel.SetFloat("_Acceleration", acceleration);
-            kernel.Dispatch(kernel.FindKernel(BOIDS), numberOfDraw / 512 + 1, 1, 1);
+            SetArgs();
+            kernel.Dispatch(kernel.FindKernel(SEPARATE), thread32, thread32, 1);
+            kernel.Dispatch(kernel.FindKernel(CENTER), thread32, thread32, 1);
+            kernel.Dispatch(kernel.FindKernel(VELOCITY_SUM), thread32, thread32, 1);
+            kernel.Dispatch(kernel.FindKernel(BOIDS), thread1024, 1, 1);
             Graphics.DrawMeshInstancedIndirect(mesh, 0, mat, new Bounds(Vector3.zero, bounds), argsBuff);
-        }
-        struct TransformStruct
-        {
-            public Vector3 translate;
-            public Vector3 rotation;
-            public Vector3 scale;
-            public Vector3 acceleration;
-            public Vector3 velocity;
         }
         ComputeBuffer CreateComputeBuffer<T>(T[] data, ComputeBufferType type = ComputeBufferType.Default)
         {
@@ -70,10 +62,47 @@ namespace GPU
             computeBuffer.SetData(data);
             return computeBuffer;
         }
+        void SetData()
+        {
+            var args = new uint[5] { 0, 0, 0, 0, 0 };
+            args[0] = mesh.GetIndexCount(0);
+            args[1] = (uint)numberOfDraw;
+            argsBuff = new ComputeBuffer(1, args.Length * sizeof(uint), ComputeBufferType.IndirectArguments);
+            argsBuff.SetData(args);
+        }
         void SetBuffer(string kernelName, string buffName, ComputeBuffer buff)
         {
             kernel.SetBuffer(kernel.FindKernel(kernelName), buffName, buff);
             mat.SetBuffer(buffName, buff);
+        }
+        void SetArgs()
+        {
+            kernel.SetVector("_Bounds", bounds);
+            kernel.SetFloat("_Acceleration", acceleration);
+            kernel.SetFloat("_NeighborDistance", neighborDistance);
+            kernel.SetFloat("_FieldOfView", fieldOfView);
+        }
+        void SetBuffers()
+        {
+            SetBuffer(INIT, BUFF, transformBuff);
+            SetBuffer(SEPARATE, BUFF, transformBuff);
+            SetBuffer(CENTER, BUFF, transformBuff);
+            SetBuffer(VELOCITY_SUM, BUFF, transformBuff);
+            SetBuffer(BOIDS, BUFF, transformBuff);
+        }
+        struct TransformStruct
+        {
+            Vector3 translate;
+            Vector3 rotation;
+            Vector3 scale;
+            Vector3 acceleration;
+            Vector3 velocity;
+            Vector3 center;
+            uint centerCount;
+            Vector3 separate;
+            uint separateCount;
+            public Vector3 velocitySum;
+            public uint velocitySumCount;
         }
     }
 }
