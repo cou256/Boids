@@ -6,9 +6,15 @@ namespace GPU
     public class Boids : MonoBehaviour
     {
         [SerializeField] int numberOfDraw;
+        [SerializeField] Vector3 scale;
         [SerializeField] float acceleration;
-        [SerializeField] float neighborDistance;
-        [SerializeField] float fieldOfView;
+        [SerializeField] float separateWeight;
+        [SerializeField] float cohesionWeight;
+        [SerializeField] float alignWeight;
+        [SerializeField] float boundaryWeight;
+        [SerializeField] float separateNeighborDistance;
+        [SerializeField] float cohesionNeighborDistance;
+        [SerializeField] float alignNeighborDistance;
         [SerializeField] Vector3 bounds;
         [SerializeField] Mesh mesh;
         [SerializeField] Material mat;
@@ -18,9 +24,7 @@ namespace GPU
         ComputeBuffer argsBuff;
 
         const string INIT = "Initialize";
-        const string SEPARATE = "SeparateCompute";
-        const string CENTER = "CenterCompute";
-        const string VELOCITY_SUM = "VelocitySumCompute";
+        const string FORCE = "ForceCompute";
         const string BOIDS = "BoidsCompute";
         const string BUFF = "_TransformBuff";
         int thread32, thread1024;
@@ -50,9 +54,7 @@ namespace GPU
         void Update()
         {
             SetArgs();
-            kernel.Dispatch(kernel.FindKernel(SEPARATE), thread32, thread32, 1);
-            kernel.Dispatch(kernel.FindKernel(CENTER), thread32, thread32, 1);
-            kernel.Dispatch(kernel.FindKernel(VELOCITY_SUM), thread32, thread32, 1);
+            kernel.Dispatch(kernel.FindKernel(FORCE), thread32, thread32, 1);
             kernel.Dispatch(kernel.FindKernel(BOIDS), thread1024, 1, 1);
             Graphics.DrawMeshInstancedIndirect(mesh, 0, mat, new Bounds(Vector3.zero, bounds), argsBuff);
         }
@@ -78,31 +80,34 @@ namespace GPU
         void SetArgs()
         {
             kernel.SetVector("_Bounds", bounds);
+            kernel.SetVector("_Scale", scale);
             kernel.SetFloat("_Acceleration", acceleration);
-            kernel.SetFloat("_NeighborDistance", neighborDistance);
-            kernel.SetFloat("_FieldOfView", fieldOfView);
+            kernel.SetFloat("_SeparateWeight", separateWeight);
+            kernel.SetFloat("_CohesionWeight", cohesionWeight);
+            kernel.SetFloat("_AlignWeight", alignWeight);
+            kernel.SetFloat("_BoundaryWeight", boundaryWeight);
+            kernel.SetFloat("_SeparateNeighborDistance", separateNeighborDistance);
+            kernel.SetFloat("_CohesionNeighborDistance", cohesionNeighborDistance);
+            kernel.SetFloat("_AlignNeighborDistance", alignNeighborDistance);
+            mat.SetVector("_Scale", scale);
         }
         void SetBuffers()
         {
             SetBuffer(INIT, BUFF, transformBuff);
-            SetBuffer(SEPARATE, BUFF, transformBuff);
-            SetBuffer(CENTER, BUFF, transformBuff);
-            SetBuffer(VELOCITY_SUM, BUFF, transformBuff);
+            SetBuffer(FORCE, BUFF, transformBuff);
             SetBuffer(BOIDS, BUFF, transformBuff);
         }
         struct TransformStruct
         {
             Vector3 translate;
             Vector3 rotation;
-            Vector3 scale;
-            Vector3 acceleration;
             Vector3 velocity;
             Vector3 center;
             uint centerCount;
             Vector3 separate;
             uint separateCount;
-            public Vector3 velocitySum;
-            public uint velocitySumCount;
+            Vector3 velocitySum;
+            uint velocitySumCount;
         }
     }
 }

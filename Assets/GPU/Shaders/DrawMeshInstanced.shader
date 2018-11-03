@@ -21,8 +21,6 @@ Shader "Instanced/DrawMeshInstanced" {
 		struct TransformStruct{
 			float3 translate;
 			float3 rotation;
-			float3 scale;
-			float3 acceleration;
 			float3 velocity;
 			float3 center;
 			uint centerCount;
@@ -45,12 +43,13 @@ Shader "Instanced/DrawMeshInstanced" {
 		half _Glossiness;
 		half _Metallic;
 		fixed4 _Color;
+		float3 _Scale;
 
 		void setup()
 		{
 			#ifdef UNITY_PROCEDURAL_INSTANCING_ENABLED
 			TransformStruct t = _TransformBuff[unity_InstanceID];
-			unity_ObjectToWorld = mul(translate_m(t.translate), mul(rotate_m(t.rotation), scale_m(t.scale)));
+			unity_ObjectToWorld = mul(translate_m(t.translate), mul(rotate_m(t.rotation), scale_m(_Scale)));
 			#endif
 		}
 		void surf (Input IN, inout SurfaceOutputStandard o) {
