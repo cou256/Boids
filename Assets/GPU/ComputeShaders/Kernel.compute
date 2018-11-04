@@ -2,7 +2,6 @@
 #pragma kernel ForceCompute
 #pragma kernel BoidsCompute
 #include "UnityCG.cginc"
-#include "../Cginc/Transform.cginc"
 
 struct TransformStruct{
 	float3 translate;
@@ -37,13 +36,9 @@ float rand(uint3 id : SV_DispatchThreadID, float salt) {
 	return frac(sin(dot(id.xy, float2(12.9898, 78.233))) * 43758.5453 * salt);
 }
 void rotate(uint3 id : SV_DispatchThreadID){
-	float3 a = normalize(_TransformBuff[id.x].velocity);
-	if(!isnan(a.x) && !isnan(a.y) && !isnan(a.z)){
-		float x = atan2(a.y,a.z);
-		float y = atan2(a.z,a.x);
-		_TransformBuff[id.x].rotation.x = degrees(x);
-		_TransformBuff[id.x].rotation.y = degrees(y);
-	}
+	float3 a = _TransformBuff[id.x].velocity;
+	_TransformBuff[id.x].rotation.x = degrees(-asin(a.y / (length(a) + 1e-8)));
+	_TransformBuff[id.x].rotation.y = degrees(atan2(a.x,a.z));
 }
 float3 boundary(uint3 id : SV_DispatchThreadID){
 	float3 t = _TransformBuff[id.x].translate;
@@ -116,7 +111,7 @@ void finalize(uint3 id : SV_DispatchThreadID)
 }
 [numthreads(1024, 1, 1)]
 void Initialize(uint3 id : SV_DispatchThreadID) {
-	_TransformBuff[id.x].translate = float3(rand(id, rand(id, 2)), rand(id,rand(id, 3)), rand(id, rand(id, 4))) - 0.5;
+	 _TransformBuff[id.x].translate = (float3(rand(id, rand(id, _Time.y)), rand(id,rand(id, _Time.z)), rand(id, rand(id, _Time.w))) - 0.5) * _Bounds;
 }
 [numthreads(32, 32, 1)]
 void ForceCompute(uint3 id : SV_DispatchThreadID) {
