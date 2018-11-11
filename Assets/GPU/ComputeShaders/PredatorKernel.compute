@@ -17,7 +17,7 @@ struct TransformStruct{
 
 RWStructuredBuffer<TransformStruct> _TransformBuff;
 float3 _Bounds;
-float _Acceleration;
+float _Speed;
 float _SeparateWeight;
 float _CohesionWeight;
 float _AlignWeight;
@@ -98,7 +98,7 @@ void motion(uint3 id : SV_DispatchThreadID){
 		+ (align(id)	* _AlignWeight)
 		+ (boundary(id)	* _BoundaryWeight);
 	_TransformBuff[id.x].velocity += force * unity_DeltaTime.x;
-	_TransformBuff[id.x].translate += _TransformBuff[id.x].velocity * unity_DeltaTime.x * _Acceleration;
+	_TransformBuff[id.x].translate += _TransformBuff[id.x].velocity * unity_DeltaTime.x * _Speed;
 }
 void finalize(uint3 id : SV_DispatchThreadID)
 {

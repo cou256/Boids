@@ -11,12 +11,13 @@ Shader "Instanced/DrawMeshInstanced" {
 		LOD 200
 		
 		CGPROGRAM
-		#pragma surface surf Standard fullforwardshadows
+		#pragma surface surf Standard fullforwardshadows vertex:vert addshadow
 		#pragma multi_compile_instancing
 		#pragma instancing_options procedural:setup
 		#pragma target 5.0
 
 		#include "../Cginc/Transform.cginc"
+		#include "../Cginc/Color.cginc"
 
 		struct TransformStruct{
 			float3 translate;
@@ -52,12 +53,14 @@ Shader "Instanced/DrawMeshInstanced" {
 			unity_ObjectToWorld = mul(translate_m(t.translate), mul(rotate_m(t.rotation), scale_m(_Scale)));
 			#endif
 		}
+		void vert(inout appdata_full v) {
+			v.normal = normalize(mul(unity_ObjectToWorld, v.normal)); 
+		}
 		void surf (Input IN, inout SurfaceOutputStandard o) {
-			fixed4 c = tex2D (_MainTex, IN.uv_MainTex) * _Color;
-			o.Albedo = c.rgb;
+			o.Albedo = _Color.rgb;
 			o.Metallic = _Metallic;
 			o.Smoothness = _Glossiness;
-			o.Alpha = c.a;
+			o.Alpha = _Color.a;
 		}
 		ENDCG
 	}

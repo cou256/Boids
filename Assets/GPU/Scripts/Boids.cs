@@ -8,16 +8,12 @@ namespace GPU
         [SerializeField] int numberOfDraw;
         [SerializeField] Vector3 scale;
         [SerializeField] float acceleration;
-        [SerializeField] float separateWeight;
-        [SerializeField] float cohesionWeight;
-        [SerializeField] float alignWeight;
         [SerializeField] float boundaryWeight;
-        [SerializeField] float separateNeighborDistance;
-        [SerializeField] float cohesionNeighborDistance;
-        [SerializeField] float alignNeighborDistance;
         [SerializeField] Vector3 bounds;
-        [SerializeField] Mesh mesh;
-        [SerializeField] Material mat;
+        [SerializeField] Param Separate;
+        [SerializeField] Param Cohesion;
+        [SerializeField] Param Align;
+        [SerializeField] Object smallFish;
         [SerializeField] ComputeShader kernel;
 
         ComputeBuffer transformBuff;
@@ -49,6 +45,7 @@ namespace GPU
         }
         void Start()
         {
+            kernel.SetVector("_Bounds", bounds);
             kernel.Dispatch(kernel.FindKernel(INIT), thread1024, 1, 1);
         }
         void Update()
@@ -56,7 +53,7 @@ namespace GPU
             SetArgs();
             kernel.Dispatch(kernel.FindKernel(FORCE), thread32, thread32, 1);
             kernel.Dispatch(kernel.FindKernel(BOIDS), thread1024, 1, 1);
-            Graphics.DrawMeshInstancedIndirect(mesh, 0, mat, new Bounds(Vector3.zero, bounds), argsBuff);
+            Graphics.DrawMeshInstancedIndirect(smallFish.Mesh, 0, smallFish.Material, new Bounds(Vector3.zero, bounds), argsBuff);
         }
         ComputeBuffer CreateComputeBuffer<T>(T[] data, ComputeBufferType type = ComputeBufferType.Default)
         {
@@ -67,7 +64,7 @@ namespace GPU
         void SetData()
         {
             var args = new uint[5] { 0, 0, 0, 0, 0 };
-            args[0] = mesh.GetIndexCount(0);
+            args[0] = smallFish.Mesh.GetIndexCount(0);
             args[1] = (uint)numberOfDraw;
             argsBuff = new ComputeBuffer(1, args.Length * sizeof(uint), ComputeBufferType.IndirectArguments);
             argsBuff.SetData(args);
@@ -75,27 +72,38 @@ namespace GPU
         void SetBuffer(string kernelName, string buffName, ComputeBuffer buff)
         {
             kernel.SetBuffer(kernel.FindKernel(kernelName), buffName, buff);
-            mat.SetBuffer(buffName, buff);
+            smallFish.Material.SetBuffer(buffName, buff);
         }
         void SetArgs()
         {
             kernel.SetVector("_Bounds", bounds);
-            kernel.SetVector("_Scale", scale);
-            kernel.SetFloat("_Acceleration", acceleration);
-            kernel.SetFloat("_SeparateWeight", separateWeight);
-            kernel.SetFloat("_CohesionWeight", cohesionWeight);
-            kernel.SetFloat("_AlignWeight", alignWeight);
+            kernel.SetFloat("_Speed", acceleration);
+            kernel.SetFloat("_SeparateWeight", Separate.Weight);
+            kernel.SetFloat("_CohesionWeight", Cohesion.Weight);
+            kernel.SetFloat("_AlignWeight", Align.Weight);
             kernel.SetFloat("_BoundaryWeight", boundaryWeight);
-            kernel.SetFloat("_SeparateNeighborDistance", separateNeighborDistance);
-            kernel.SetFloat("_CohesionNeighborDistance", cohesionNeighborDistance);
-            kernel.SetFloat("_AlignNeighborDistance", alignNeighborDistance);
-            mat.SetVector("_Scale", scale);
+            kernel.SetFloat("_SeparateNeighborDistance", Separate.NeighborDistance);
+            kernel.SetFloat("_CohesionNeighborDistance", Cohesion.NeighborDistance);
+            kernel.SetFloat("_AlignNeighborDistance", Align.NeighborDistance);
+            smallFish.Material.SetVector("_Scale", scale);
         }
         void SetBuffers()
         {
             SetBuffer(INIT, BUFF, transformBuff);
             SetBuffer(FORCE, BUFF, transformBuff);
             SetBuffer(BOIDS, BUFF, transformBuff);
+        }
+        [System.Serializable]
+        struct Param
+        {
+            public float Weight;
+            public float NeighborDistance;
+        }
+        [System.Serializable]
+        struct Object
+        {
+            public Mesh Mesh;
+            public Material Material;
         }
         struct TransformStruct
         {
