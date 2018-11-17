@@ -207,24 +207,28 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: f69431ec44890074787c30baf97bc40a, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  numberOfDraw: 100
+  numberOfDraw: 300
   scale: {x: 2, y: 3, z: 6}
-  acceleration: 15
-  boundaryWeight: 3
-  bounds: {x: 200, y: 150, z: 250}
+  acceleration: 20
+  boundaryWeight: 15
+  bounds: {x: 300, y: 200, z: 150}
   Separate:
-    Weight: 2
-    NeighborDistance: 6
+    Weight: 10
+    NeighborDistance: 10
   Cohesion:
-    Weight: 1
-    NeighborDistance: 60
-  Align:
-    Weight: 1.5
+    Weight: 5
     NeighborDistance: 30
-  smallFish:
+  Align:
+    Weight: 5
+    NeighborDistance: 15
+  boidObject:
     Mesh: {fileID: 10202, guid: 0000000000000000e000000000000000, type: 0}
     Material: {fileID: 2100000, guid: ce3841849437c44419800b2777d21372, type: 2}
   kernel: {fileID: 7200000, guid: b786efd4ee213e2438f83d59f54866f2, type: 3}
+  predator:
+    boids: {fileID: 0}
+    escapeRadius: 0
+    escapeWeight: 0
 --- !u!4 &483603387
 Transform:
   m_ObjectHideFlags: 0
@@ -251,22 +255,26 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   numberOfDraw: 10000
   scale: {x: 1, y: 1.5, z: 3}
-  acceleration: 20
-  boundaryWeight: 3
-  bounds: {x: 200, y: 150, z: 250}
+  acceleration: 10
+  boundaryWeight: 15
+  bounds: {x: 300, y: 200, z: 150}
   Separate:
-    Weight: 2
-    NeighborDistance: 3
+    Weight: 30
+    NeighborDistance: 10
   Cohesion:
-    Weight: 1
-    NeighborDistance: 30
+    Weight: 20
+    NeighborDistance: 20
   Align:
-    Weight: 1.5
-    NeighborDistance: 15
-  smallFish:
+    Weight: 25
+    NeighborDistance: 30
+  boidObject:
     Mesh: {fileID: 10202, guid: 0000000000000000e000000000000000, type: 0}
     Material: {fileID: 2100000, guid: 8879e116ba60cc8458e27e49422277c1, type: 2}
   kernel: {fileID: 7200000, guid: 3c2f4863bcd17d74d87219865ee2b6b0, type: 3}
+  predator:
+    boids: {fileID: 483603386}
+    escapeRadius: 20
+    escapeWeight: 100
 --- !u!1 &977752216
 GameObject:
   m_ObjectHideFlags: 0

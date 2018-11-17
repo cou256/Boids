@@ -13,8 +13,9 @@ namespace GPU
         [SerializeField] Param Separate;
         [SerializeField] Param Cohesion;
         [SerializeField] Param Align;
-        [SerializeField] Object smallFish;
+        [SerializeField] BoidObject boidObject;
         [SerializeField] ComputeShader kernel;
+        [SerializeField] Predator predator;
 
         ComputeBuffer transformBuff;
         ComputeBuffer argsBuff;
@@ -25,8 +26,6 @@ namespace GPU
         const string BUFF = "_TransformBuff";
         int thread32, thread1024;
 
-        TransformStruct[] data;
-
         void Awake()
         {
             transformBuff = CreateComputeBuffer(new TransformStruct[numberOfDraw]);
@@ -34,7 +33,6 @@ namespace GPU
             thread1024 = numberOfDraw / 1024 + 1;
             SetData();
             SetBuffers();
-            data = new TransformStruct[numberOfDraw];
         }
         void OnDisable()
         {
@@ -53,7 +51,7 @@ namespace GPU
             SetArgs();
             kernel.Dispatch(kernel.FindKernel(FORCE), thread32, thread32, 1);
             kernel.Dispatch(kernel.FindKernel(BOIDS), thread1024, 1, 1);
-            Graphics.DrawMeshInstancedIndirect(smallFish.Mesh, 0, smallFish.Material, new Bounds(Vector3.zero, bounds), argsBuff);
+            Graphics.DrawMeshInstancedIndirect(boidObject.Mesh, 0, boidObject.Material, new Bounds(Vector3.zero, bounds), argsBuff);
         }
         ComputeBuffer CreateComputeBuffer<T>(T[] data, ComputeBufferType type = ComputeBufferType.Default)
         {
@@ -64,7 +62,7 @@ namespace GPU
         void SetData()
         {
             var args = new uint[5] { 0, 0, 0, 0, 0 };
-            args[0] = smallFish.Mesh.GetIndexCount(0);
+            args[0] = boidObject.Mesh.GetIndexCount(0);
             args[1] = (uint)numberOfDraw;
             argsBuff = new ComputeBuffer(1, args.Length * sizeof(uint), ComputeBufferType.IndirectArguments);
             argsBuff.SetData(args);
@@ -72,7 +70,7 @@ namespace GPU
         void SetBuffer(string kernelName, string buffName, ComputeBuffer buff)
         {
             kernel.SetBuffer(kernel.FindKernel(kernelName), buffName, buff);
-            smallFish.Material.SetBuffer(buffName, buff);
+            boidObject.Material.SetBuffer(buffName, buff);
         }
         void SetArgs()
         {
@@ -85,13 +83,23 @@ namespace GPU
             kernel.SetFloat("_SeparateNeighborDistance", Separate.NeighborDistance);
             kernel.SetFloat("_CohesionNeighborDistance", Cohesion.NeighborDistance);
             kernel.SetFloat("_AlignNeighborDistance", Align.NeighborDistance);
-            smallFish.Material.SetVector("_Scale", scale);
+            boidObject.Material.SetVector("_Scale", scale);
+            if (predator.boids)
+            {
+                kernel.SetInt("_PredatorCount", predator.boids.numberOfDraw);
+                kernel.SetFloat("_EscapeRadius", predator.escapeRadius);
+                kernel.SetFloat("_EscapeWeight", predator.escapeWeight);
+            }
         }
         void SetBuffers()
         {
             SetBuffer(INIT, BUFF, transformBuff);
             SetBuffer(FORCE, BUFF, transformBuff);
             SetBuffer(BOIDS, BUFF, transformBuff);
+            if (predator.boids)
+            {
+                SetBuffer(BOIDS, "_PredatorBuff", predator.boids.transformBuff);
+            }
         }
         [System.Serializable]
         struct Param
@@ -100,10 +108,17 @@ namespace GPU
             public float NeighborDistance;
         }
         [System.Serializable]
-        struct Object
+        struct BoidObject
         {
             public Mesh Mesh;
             public Material Material;
+        }
+        [System.Serializable]
+        struct Predator
+        {
+            public Boids boids;
+            public float escapeRadius;
+            public float escapeWeight;
         }
         struct TransformStruct
         {

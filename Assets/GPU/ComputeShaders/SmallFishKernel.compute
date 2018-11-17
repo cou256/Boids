@@ -5,6 +5,26 @@
 #include "UnityCG.cginc"
 #include "../Cginc/Boids.cginc"
 
+RWStructuredBuffer<TransformStruct> _PredatorBuff;
+int _PredatorCount;
+float _EscapeRadius;
+float _EscapeWeight;
+
+void predatorEscape(uint3 id : SV_DispatchThreadID) {
+	float3 dis = float3(0.0,0.0,0.0);
+	int count = 0;
+	for(int i = 0; i < _PredatorCount; i++){
+		float3 sub = _TransformBuff[id.x].translate - _PredatorBuff[i].translate;
+		if(length(sub) < _EscapeRadius){
+			dis += sub;
+			count++;
+		}
+	}
+	if(count > 0){
+		float3 force = normalize(dis/count) * _EscapeWeight;
+		_TransformBuff[id.x].velocity += force * unity_DeltaTime.x;
+	}
+}
 [numthreads(1024, 1, 1)]
 void Initialize(uint3 id : SV_DispatchThreadID) {
 	initialize(id);
@@ -15,5 +35,6 @@ void ForceCompute(uint3 id : SV_DispatchThreadID) {
 }
 [numthreads(1024, 1, 1)]
 void BoidsCompute(uint3 id : SV_DispatchThreadID) {
+	predatorEscape(id);
 	boidsCompute(id);
 }
