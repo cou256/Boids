@@ -39,6 +39,7 @@ Shader "Instanced/DrawMeshInstanced" {
 
 		struct Input {
 			float2 uv_MainTex;
+			fixed4 color;
 		};
 
 		half _Glossiness;
@@ -54,10 +55,10 @@ Shader "Instanced/DrawMeshInstanced" {
 			#endif
 		}
 		void vert(inout appdata_full v) {
-			v.normal = normalize(mul(unity_ObjectToWorld, v.normal)); 
+			v.normal = normalize(mul(unity_ObjectToWorld, v.normal));
 		}
 		void surf (Input IN, inout SurfaceOutputStandard o) {
-			o.Albedo = _Color.rgb;
+			o.Albedo = _Color;
 			o.Metallic = _Metallic;
 			o.Smoothness = _Glossiness;
 			o.Alpha = _Color.a;

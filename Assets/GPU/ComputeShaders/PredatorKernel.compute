@@ -1,141 +1,19 @@
 ﻿#pragma kernel Initialize
 #pragma kernel ForceCompute
 #pragma kernel BoidsCompute
+
 #include "UnityCG.cginc"
+#include "../Cginc/Boids.cginc"
 
-struct TransformStruct{
-	float3 translate;
-	float3 rotation;
-	float3 velocity;
-	float3 center;
-	uint centerCount;
-	float3 separate;
-    uint separateCount;
-	float3 velocitySum;
-    uint velocitySumCount;
-};
-
-RWStructuredBuffer<TransformStruct> _TransformBuff;
-float3 _Bounds;
-float _Speed;
-float _SeparateWeight;
-float _CohesionWeight;
-float _AlignWeight;
-float _BoundaryWeight;
-float _SeparateNeighborDistance;
-float _CohesionNeighborDistance;
-float _AlignNeighborDistance;
-
-const float3 ZERO = float3(0.0,0.0,0.0);
-
-/*
- Reference
- https://stackoverflow.com/questions/12964279/whats-the-origin-of-this-glsl-rand-one-liner
-*/
-float rand(uint3 id : SV_DispatchThreadID, float salt) {
-	return frac(sin(dot(id.xy, float2(12.9898, 78.233))) * 43758.5453 * salt);
-}
-void rotate(uint3 id : SV_DispatchThreadID){
-	float3 a = _TransformBuff[id.x].velocity;
-	_TransformBuff[id.x].rotation.x = degrees(-asin(a.y / (length(a) + 1e-8)));
-	_TransformBuff[id.x].rotation.y = degrees(atan2(a.x,a.z));
-}
-float3 boundary(uint3 id : SV_DispatchThreadID){
-	float3 t = _TransformBuff[id.x].translate;
-	float3 v = _TransformBuff[id.x].velocity;
-	float3 b = _Bounds * 0.5;
-	float3 desired = float3(0.0,0.0,0.0);
-	if(t.x < -b.x){
-		desired = float3( 1.0, v.y, v.z);
-	}
-	if(t.x >  b.x){
-		desired = float3(-1.0, v.y, v.z);
-	}
-	if(t.y < -b.y){
-		desired = float3( v.x, 1.0, v.z);
-	}
-	if(t.y >  b.y){
-		desired = float3( v.x,-1.0, v.z);
-	}
-	if(t.z < -b.z){
-		desired = float3( v.x, v.y, 1.0);
-	}
-	if(t.z >  b.z){
-		desired = float3( v.x, v.y,-1.0);
-	}
-	if(desired.x != 0.0 | desired.y != 0.0 | desired.z != 0.0) {
-		return (normalize(desired) - _TransformBuff[id.x].velocity);
-	}else{
-		return ZERO;
-	}
-}
-float3 separate(uint3 id : SV_DispatchThreadID){
-	if(_TransformBuff[id.x].separateCount > 0)
-	{
-		return normalize(_TransformBuff[id.x].separate / _TransformBuff[id.x].separateCount);
-	}
-	return ZERO;
-}
-float3 cohesion(uint3 id : SV_DispatchThreadID) {
-	if(_TransformBuff[id.x].centerCount > 0)
-	{
-		float3 center = _TransformBuff[id.x].center / _TransformBuff[id.x].centerCount;
-		return normalize(center - _TransformBuff[id.x].translate);
-	}
-	return ZERO;
-}
-float3 align(uint3 id : SV_DispatchThreadID) {
-	if(_TransformBuff[id.x].velocitySumCount > 0 && length(_TransformBuff[id.x].velocitySum) > 0)
-	{
-		return normalize(_TransformBuff[id.x].velocitySum / _TransformBuff[id.x].velocitySumCount);
-	}
-	return ZERO;
-}
-void motion(uint3 id : SV_DispatchThreadID){
-	float3 force
-		= (separate(id)	* _SeparateWeight)
-		+ (cohesion(id)	* _CohesionWeight)
-		+ (align(id)	* _AlignWeight)
-		+ (boundary(id)	* _BoundaryWeight);
-	_TransformBuff[id.x].velocity += force * unity_DeltaTime.x;
-	_TransformBuff[id.x].translate += _TransformBuff[id.x].velocity * unity_DeltaTime.x * _Speed;
-}
-void finalize(uint3 id : SV_DispatchThreadID)
-{
-	_TransformBuff[id.x].separate = ZERO;
-	_TransformBuff[id.x].separateCount = 0.0;
-	_TransformBuff[id.x].center = ZERO;
-	_TransformBuff[id.x].centerCount = 0.0;
-	_TransformBuff[id.x].velocitySum = ZERO;
-	_TransformBuff[id.x].velocitySumCount = 0.0;
-}
 [numthreads(1024, 1, 1)]
 void Initialize(uint3 id : SV_DispatchThreadID) {
-	 _TransformBuff[id.x].translate = (float3(rand(id, rand(id, _Time.y)), rand(id,rand(id, _Time.z)), rand(id, rand(id, _Time.w))) - 0.5) * _Bounds;
+	initialize(id);
 }
 [numthreads(32, 32, 1)]
 void ForceCompute(uint3 id : SV_DispatchThreadID) {
-	float3 diff = _TransformBuff[id.x].translate - _TransformBuff[id.y].translate;
-	float dist = length(diff);
-	if (dist > 0.0 && dist < _SeparateNeighborDistance)
-	{
-		_TransformBuff[id.x].separate += (normalize(diff) / dist);
-		_TransformBuff[id.x].separateCount++;
-	}
-	if (dist > 0.0 && dist < _CohesionNeighborDistance)
-	{
-		_TransformBuff[id.x].center += _TransformBuff[id.y].translate;
-		_TransformBuff[id.x].centerCount++;
-	}
-	if (dist > 0.0 && dist < _AlignNeighborDistance)
-	{
-		_TransformBuff[id.x].velocitySum += _TransformBuff[id.y].velocity;
-		_TransformBuff[id.x].velocitySumCount++;
-	}
+	forceCompute(id);
 }
 [numthreads(1024, 1, 1)]
 void BoidsCompute(uint3 id : SV_DispatchThreadID) {
-	motion(id);
-	rotate(id);
-	finalize(id);
+	boidsCompute(id);
 }
