@@ -3,7 +3,7 @@
 #pragma kernel BoidsCompute
 
 #include "UnityCG.cginc"
-#include "../Cginc/Boids.cginc"
+#include "Boids.cginc"
 
 RWStructuredBuffer<TransformStruct> _PredatorBuff;
 int _PredatorCount;

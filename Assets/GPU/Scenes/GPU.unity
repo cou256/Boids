@@ -207,19 +207,19 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: f69431ec44890074787c30baf97bc40a, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  numberOfDraw: 300
+  numberOfDraw: 200
   scale: {x: 2, y: 3, z: 6}
   acceleration: 20
-  boundaryWeight: 15
-  bounds: {x: 300, y: 200, z: 150}
+  boundaryWeight: 10
+  bounds: {x: 300, y: 200, z: 200}
   Separate:
-    Weight: 10
+    Weight: 6
     NeighborDistance: 10
   Cohesion:
-    Weight: 5
-    NeighborDistance: 30
+    Weight: 2
+    NeighborDistance: 50
   Align:
-    Weight: 5
+    Weight: 4
     NeighborDistance: 15
   boidObject:
     Mesh: {fileID: 10202, guid: 0000000000000000e000000000000000, type: 0}
@@ -253,16 +253,16 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: f69431ec44890074787c30baf97bc40a, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  numberOfDraw: 10000
+  numberOfDraw: 15000
   scale: {x: 1, y: 1.5, z: 3}
-  acceleration: 10
-  boundaryWeight: 15
+  acceleration: 30
+  boundaryWeight: 20
   bounds: {x: 300, y: 200, z: 150}
   Separate:
     Weight: 30
     NeighborDistance: 10
   Cohesion:
-    Weight: 20
+    Weight: 10
     NeighborDistance: 20
   Align:
     Weight: 25

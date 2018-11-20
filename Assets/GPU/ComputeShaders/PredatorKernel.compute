@@ -3,7 +3,7 @@
 #pragma kernel BoidsCompute
 
 #include "UnityCG.cginc"
-#include "../Cginc/Boids.cginc"
+#include "Boids.cginc"
 
 [numthreads(1024, 1, 1)]
 void Initialize(uint3 id : SV_DispatchThreadID) {
