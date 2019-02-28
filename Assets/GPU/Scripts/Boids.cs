@@ -13,6 +13,7 @@ namespace GPU
         [SerializeField] Param Separate;
         [SerializeField] Param Cohesion;
         [SerializeField] Param Align;
+        [SerializeField] Param Feed;
         [SerializeField] BoidObject boidObject;
         [SerializeField] ComputeShader kernel;
         [SerializeField] Predator predator;
@@ -25,6 +26,7 @@ namespace GPU
         const string BOIDS = "BoidsCompute";
         const string BUFF = "_TransformBuff";
         int thread32, thread1024;
+        [SerializeField] bool mouseDown;
 
         void Awake()
         {
@@ -48,6 +50,7 @@ namespace GPU
         }
         void Update()
         {
+            MouseInput();
             SetArgs();
             kernel.Dispatch(kernel.FindKernel(FORCE), thread32, thread32, 1);
             kernel.Dispatch(kernel.FindKernel(BOIDS), thread1024, 1, 1);
@@ -58,6 +61,17 @@ namespace GPU
             var computeBuffer = new ComputeBuffer(data.Length, Marshal.SizeOf(typeof(T)), type);
             computeBuffer.SetData(data);
             return computeBuffer;
+        }
+        void MouseInput()
+        {
+            if (Input.GetMouseButtonDown(0))
+            {
+                mouseDown = true;
+            }
+            if (Input.GetMouseButtonUp(0))
+            {
+                mouseDown = false;
+            }
         }
         void SetData()
         {
@@ -89,6 +103,17 @@ namespace GPU
                 kernel.SetInt("_PredatorCount", predator.boids.numberOfDraw);
                 kernel.SetFloat("_EscapeRadius", predator.escapeRadius);
                 kernel.SetFloat("_EscapeWeight", predator.escapeWeight);
+            }
+            if (Feed.Weight > 0 && mouseDown)
+            {
+                var mpos = Input.mousePosition;
+                mpos.z = (bounds.z - Camera.main.transform.position.z) * 0.5f;
+                var pos = Camera.main.ScreenToWorldPoint(mpos);
+                kernel.SetVector("_FeedPosition", pos);
+                kernel.SetFloat("_FeedWeight", Feed.Weight);
+                kernel.SetFloat("_FeedNeighborDistance", Feed.NeighborDistance);
+            }else{
+                kernel.SetFloat("_FeedWeight", 0.0f);
             }
         }
         void SetBuffers()

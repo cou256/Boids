@@ -226,6 +226,9 @@ MonoBehaviour:
   Align:
     Weight: 4
     NeighborDistance: 15
+  Feed:
+    Weight: 0
+    NeighborDistance: 0
   boidObject:
     Mesh: {fileID: 10202, guid: 0000000000000000e000000000000000, type: 0}
     Material: {fileID: 2100000, guid: ce3841849437c44419800b2777d21372, type: 2}
@@ -234,6 +237,7 @@ MonoBehaviour:
     boids: {fileID: 0}
     escapeRadius: 0
     escapeWeight: 0
+  mouseDown: 0
 --- !u!4 &483603387
 Transform:
   m_ObjectHideFlags: 0
@@ -260,7 +264,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: f69431ec44890074787c30baf97bc40a, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  numberOfDraw: 15000
+  numberOfDraw: 10000
   scale: {x: 1, y: 1.5, z: 3}
   acceleration: 30
   boundaryWeight: 20
@@ -274,6 +278,9 @@ MonoBehaviour:
   Align:
     Weight: 25
     NeighborDistance: 30
+  Feed:
+    Weight: 50
+    NeighborDistance: 100
   boidObject:
     Mesh: {fileID: 10202, guid: 0000000000000000e000000000000000, type: 0}
     Material: {fileID: 2100000, guid: 8879e116ba60cc8458e27e49422277c1, type: 2}
@@ -282,6 +289,7 @@ MonoBehaviour:
     boids: {fileID: 483603386}
     escapeRadius: 20
     escapeWeight: 100
+  mouseDown: 0
 --- !u!114 &483603389
 MonoBehaviour:
   m_ObjectHideFlags: 0

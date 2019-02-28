@@ -16,10 +16,13 @@ float _Speed;
 float _SeparateWeight;
 float _CohesionWeight;
 float _AlignWeight;
+float _FeedWeight;
 float _BoundaryWeight;
 float _SeparateNeighborDistance;
 float _CohesionNeighborDistance;
 float _AlignNeighborDistance;
+float _FeedNeighborDistance;
+float3 _FeedPosition;
 
 const float3 ZERO = float3(0.0,0.0,0.0);
 
@@ -82,11 +85,22 @@ float3 align(uint3 id : SV_DispatchThreadID) {
 	}
 	return ZERO;
 }
+float3 feed(uint3 id : SV_DispatchThreadID)
+{
+	float3 diff = _FeedPosition - _TransformBuff[id.x].translate;
+	float dist = length(diff);
+	if(dist < _FeedNeighborDistance)
+	{
+		return normalize(diff);
+	}
+	return ZERO;
+}
 void motion(uint3 id : SV_DispatchThreadID){
 	float3 force
 		= (separate(id)	* _SeparateWeight)
 		+ (cohesion(id)	* _CohesionWeight)
 		+ (align(id)	* _AlignWeight)
+		+ (feed(id)		* _FeedWeight)
 		+ (boundary(id)	* _BoundaryWeight);
 	_TransformBuff[id.x].velocity += force * unity_DeltaTime.x;
 	float mag = length(_TransformBuff[id.x].velocity);
