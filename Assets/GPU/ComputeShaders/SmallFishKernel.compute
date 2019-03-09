@@ -10,11 +10,17 @@ int _PredatorCount;
 float _EscapeRadius;
 float _EscapeWeight;
 
-void predatorEscape(uint3 id : SV_DispatchThreadID) {
+void predatorEscape(
+	uint3 Gid : SV_GroupID,
+	uint3 DTid : SV_DispatchThreadID,
+	uint3 GTid : SV_GroupThreadID,
+	uint GI : SV_GroupIndex
+) {
 	float3 dis = float3(0.0,0.0,0.0);
 	int count = 0;
+	[loop]
 	for(int i = 0; i < _PredatorCount; i++){
-		float3 sub = _TransformBuff[id.x].translate - _PredatorBuff[i].translate;
+		float3 sub = _TransformBuff[DTid.x].translate - _PredatorBuff[i].translate;
 		if(length(sub) < _EscapeRadius){
 			dis += sub;
 			count++;
@@ -22,19 +28,34 @@ void predatorEscape(uint3 id : SV_DispatchThreadID) {
 	}
 	if(count > 0){
 		float3 force = normalize(dis/count) * _EscapeWeight;
-		_TransformBuff[id.x].velocity += force * unity_DeltaTime.x;
+		_TransformBuff[DTid.x].velocity += force * unity_DeltaTime.x;
 	}
 }
 [numthreads(1024, 1, 1)]
-void Initialize(uint3 id : SV_DispatchThreadID) {
-	initialize(id);
-}
-[numthreads(32, 32, 1)]
-void ForceCompute(uint3 id : SV_DispatchThreadID) {
-	forceCompute(id);
+void Initialize (
+	uint3 Gid : SV_GroupID,
+	uint3 DTid : SV_DispatchThreadID,
+	uint3 GTid : SV_GroupThreadID,
+	uint GI : SV_GroupIndex
+) {
+	initialize(Gid, DTid, GTid, GI);
 }
 [numthreads(1024, 1, 1)]
-void BoidsCompute(uint3 id : SV_DispatchThreadID) {
-	predatorEscape(id);
-	boidsCompute(id);
+void ForceCompute (
+	uint3 Gid : SV_GroupID,
+	uint3 DTid : SV_DispatchThreadID,
+	uint3 GTid : SV_GroupThreadID,
+	uint GI : SV_GroupIndex
+) {
+	forceCompute(Gid, DTid, GTid, GI);
+}
+[numthreads(1024, 1, 1)]
+void BoidsCompute(
+	uint3 Gid : SV_GroupID,
+	uint3 DTid : SV_DispatchThreadID,
+	uint3 GTid : SV_GroupThreadID,
+	uint GI : SV_GroupIndex
+){
+	predatorEscape(Gid, DTid, GTid, GI);
+	boidsCompute(Gid, DTid, GTid, GI);
 }

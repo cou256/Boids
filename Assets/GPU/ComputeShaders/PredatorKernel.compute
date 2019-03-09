@@ -6,14 +6,30 @@
 #include "Boids.cginc"
 
 [numthreads(1024, 1, 1)]
-void Initialize(uint3 id : SV_DispatchThreadID) {
-	initialize(id);
+void Initialize (
+	uint3 Gid : SV_GroupID,
+	uint3 DTid : SV_DispatchThreadID,
+	uint3 GTid : SV_GroupThreadID,
+	uint GI : SV_GroupIndex
+) {
+
+	initialize(Gid, DTid, GTid, GI);
 }
 [numthreads(32, 32, 1)]
-void ForceCompute(uint3 id : SV_DispatchThreadID) {
-	forceCompute(id);
+void ForceCompute(
+	uint3 Gid : SV_GroupID,
+	uint3 DTid : SV_DispatchThreadID,
+	uint3 GTid : SV_GroupThreadID,
+	uint GI : SV_GroupIndex
+) {
+	forceCompute(Gid, DTid, GTid, GI);
 }
 [numthreads(1024, 1, 1)]
-void BoidsCompute(uint3 id : SV_DispatchThreadID) {
-	boidsCompute(id);
+void BoidsCompute(
+	uint3 Gid : SV_GroupID,
+	uint3 DTid : SV_DispatchThreadID,
+	uint3 GTid : SV_GroupThreadID,
+	uint GI : SV_GroupIndex
+) {
+	boidsCompute(Gid, DTid, GTid, GI);
 }
