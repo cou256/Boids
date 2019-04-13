@@ -5,7 +5,10 @@
 #include "UnityCG.cginc"
 #include "Boids.cginc"
 
-[numthreads(1024, 1, 1)]
+#define THREADS0 32
+#define THREADS1 8
+
+[numthreads(THREADS0, 1, 1)]
 void Initialize (
 	uint3 Gid : SV_GroupID,
 	uint3 DTid : SV_DispatchThreadID,
@@ -15,7 +18,7 @@ void Initialize (
 
 	initialize(Gid, DTid, GTid, GI);
 }
-[numthreads(32, 32, 1)]
+[numthreads(THREADS1, THREADS1, 1)]
 void ForceCompute(
 	uint3 Gid : SV_GroupID,
 	uint3 DTid : SV_DispatchThreadID,
@@ -24,7 +27,7 @@ void ForceCompute(
 ) {
 	forceCompute(Gid, DTid, GTid, GI);
 }
-[numthreads(1024, 1, 1)]
+[numthreads(THREADS0, 1, 1)]
 void BoidsCompute(
 	uint3 Gid : SV_GroupID,
 	uint3 DTid : SV_DispatchThreadID,

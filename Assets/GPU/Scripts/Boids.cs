@@ -25,14 +25,14 @@ namespace GPU
         const string FORCE = "ForceCompute";
         const string BOIDS = "BoidsCompute";
         const string BUFF = "_TransformBuff";
-        int thread32, thread1024;
+        int thread0, thread1;
         [SerializeField] bool mouseDown;
 
         void Awake()
         {
             transformBuff = CreateComputeBuffer(new TransformStruct[numberOfDraw]);
-            thread32 = numberOfDraw / 32 + 1;
-            thread1024 = numberOfDraw / 1024 + 1;
+            thread0 = numberOfDraw / 32 + 1;
+            thread1 = numberOfDraw / 8 + 1;
             SetData();
             SetBuffers();
         }
@@ -46,14 +46,14 @@ namespace GPU
         void Start()
         {
             kernel.SetVector("_Bounds", bounds);
-            kernel.Dispatch(kernel.FindKernel(INIT), thread1024, 1, 1);
+            kernel.Dispatch(kernel.FindKernel(INIT), thread0, 1, 1);
         }
         void Update()
         {
             MouseInput();
             SetArgs();
-            kernel.Dispatch(kernel.FindKernel(FORCE), thread32, thread32, 1);
-            kernel.Dispatch(kernel.FindKernel(BOIDS), thread1024, 1, 1);
+            kernel.Dispatch(kernel.FindKernel(FORCE), thread1, thread1, 1);
+            kernel.Dispatch(kernel.FindKernel(BOIDS), thread0, 1, 1);
             Graphics.DrawMeshInstancedIndirect(boidObject.Mesh, 0, boidObject.Material, new Bounds(Vector3.zero, bounds), argsBuff);
         }
         ComputeBuffer CreateComputeBuffer<T>(T[] data, ComputeBufferType type = ComputeBufferType.Default)
