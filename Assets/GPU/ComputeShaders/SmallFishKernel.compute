@@ -3,6 +3,7 @@
 #pragma kernel BoidsCompute
 
 #include "UnityCG.cginc"
+#include "../Cginc/Transform.cginc"
 #include "Boids.cginc"
 
 #define THREADS0 32

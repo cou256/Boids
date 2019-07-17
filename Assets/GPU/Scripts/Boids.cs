@@ -148,7 +148,7 @@ namespace GPU
         struct TransformStruct
         {
             Vector3 translate;
-            Vector3 rotation;
+            Vector4 rotation;
             Vector3 velocity;
             Vector3 center;
             uint centerCount;

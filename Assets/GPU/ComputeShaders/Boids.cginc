@@ -1,6 +1,6 @@
 struct TransformStruct{
 	float3 translate;
-	float3 rotation;
+	float4 rotation;
 	float3 velocity;
 	float3 center;
 	uint centerCount;
@@ -39,9 +39,8 @@ void rotate(
 	uint3 GTid : SV_GroupThreadID,
 	uint GI : SV_GroupIndex
 ) {
-	float3 a = _TransformBuff[DTid.x].velocity;
-	_TransformBuff[DTid.x].rotation.x = degrees(-asin(a.y / (length(a) + 1e-8)));
-	_TransformBuff[DTid.x].rotation.y = degrees(atan2(a.x,a.z));
+	float3 v = _TransformBuff[DTid.x].velocity;
+    _TransformBuff[DTid.x].rotation = look_at(v, float3(0.0, 1.0, 0.0));
 }
 float3 boundary(
 	uint3 Gid : SV_GroupID,
